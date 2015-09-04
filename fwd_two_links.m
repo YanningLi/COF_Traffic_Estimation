@@ -3,11 +3,15 @@
 % throughput flow.
 % Yanning, Sep 04, 2015
 
-% TODO:
+% TODO, Sep 04, 2015:
 %   1. print computation time. Auto log output.
+%   2. Change road parameters to mile, veh/mile, veh/hr, mile/hr
+%   3. Fix the mergy infeasibility bug
+%   4. Rename variables in setIneqConstraints.m; old names too meaningless
 
 % Remark: 
 %   1. This version does not handle ramp junctions yet.
+%   2. The theory only supports entropy condition for only one junction.
 
 
 tic

@@ -3,10 +3,6 @@
 % constraints of the optimization program, has multiple functions to set
 % the objective function, and solve the program using cplex.
 
-% TODO:
-% The entropy condition works for only one junction. 
-
-
 
 classdef optProgram < handle
     

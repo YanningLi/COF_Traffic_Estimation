@@ -38,6 +38,13 @@ classdef postSolution < handle
         % the resolution we would like to plot in the visualization (mesh)
         dx_res;
         dt_res;
+        
+        
+        % the reference point for sampling M. Note, this is used for
+        % determing which boundary conditions we should use to compute the
+        % sending and receiving function.
+        t_ref;
+        
     end
     
     methods
@@ -463,13 +470,15 @@ classdef postSolution < handle
                     % break once found the first non-entropic step
                     for i = 1: length(T_grid)
                         
-                        t_ref = T_cum_grid(i);   % start time of this point
+                        % set the reference point of this step
+                        self.t_ref = T_cum_grid(i);   
+                        t_start = T_cum_grid(i);
                         t_end = T_cum_grid(i+1); % end time of this point
                         
                         % Sample the start and end point of this step;
                         % compute the min of sending and receiving function
                         % which should be entropic solution
-                        d_M = self.samplePointsJunc(t_ref, t_end, junc);
+                        d_M = self.samplePointsJunc(t_end, junc);
                         
                         if abs(q_thru(i)*T_grid(i)-d_M) > entropyTol
                             % difference greater than the tolerance
@@ -481,11 +490,11 @@ classdef postSolution < handle
                             % sends less, then the average may be same as
                             % the entropic solution.
                             % Hence, double check at the middle of the step
-                            d_M_middle = self.samplePointsJunc(t_ref,...
-                                t_ref+(t_end-t_ref)/2, junc);
+                            d_M_middle = self.samplePointsJunc(...
+                                t_start+(t_end-t_start)/2, junc);
                             
                             if abs(q_thru(i)*T_grid(i)/2 - d_M_middle) > entropyTol/2 ||...
-                                    abs(q_thru(i)*T_gird(i)/2 - (d_M - d_M_middle) ) > entropyTol/2
+                                    abs(q_thru(i)*T_grid(i)/2 - (d_M - d_M_middle) ) > entropyTol/2
                                 % not entropy
                                 TF = false;
                                 steps.(juncStr) = i;
@@ -509,11 +518,12 @@ classdef postSolution < handle
                     % check each step
                     for i = 1: length(T_grid)
                         
-                        t_ref = T_cum_grid(i);   % start time of this point
+                        self.t_ref = T_cum_grid(i);   % start time of this point
+                        t_start = T_cum_grid(i);
                         t_end = T_cum_grid(i+1); % end time of this point
                        
                         % a 1 x 2 vector true unique solution from the two incoming links
-                        d_M = self.samplePointsJunc(t_ref, t_end, junc);
+                        d_M = self.samplePointsJunc( t_end, junc);
                         
                         if abs( q_s1(i)*T_grid(i)-d_M(1) ) > entropyTol ||...
                                 abs( q_s2(i)*T_grid(i)-d_M(2) ) > entropyTol
@@ -524,8 +534,8 @@ classdef postSolution < handle
                             break
                         else
                             % doubel check the middle points
-                            d_M_middle = self.samplePointsJunc(t_ref,...
-                                t_ref+(t_end-t_ref)/2, junc);
+                            d_M_middle = self.samplePointsJunc(...
+                                t_start+(t_end-t_start)/2, junc);
                             
                             if abs( q_s1(i)*T_grid(i)/2 - d_M_middle(1) ) > entropyTol/2 ||...
                                 abs( q_s2(i)*T_grid(i)/2 - d_M_middle(2) ) > entropyTol/2
@@ -552,11 +562,12 @@ classdef postSolution < handle
                     % check each step
                     for i = 1: length(T_grid)
                         
-                        t_ref = T_cum_grid(i);   % start time of this point
+                        self.t_ref = T_cum_grid(i);   % start time of this point
+                        t_start = T_cum_grid(i);
                         t_end = T_cum_grid(i+1); % end time of this point
                         
                         % a 1 x 2 vector true unique solution from the two incoming links
-                        d_M = self.samplePointsJunc(t_ref, t_end, junc);
+                        d_M = self.samplePointsJunc( t_end, junc);
                         
                         if abs( q_r1(i)*T_grid(i)-d_M(1) ) > entropyTol ||...
                                 abs( q_r2(i)*T_grid(i)-d_M(2) ) > entropyTol
@@ -567,8 +578,8 @@ classdef postSolution < handle
                             break
                         else
                             % doubel check the middle points
-                            d_M_middle = self.samplePointsJunc(t_ref,...
-                                t_ref+(t_end-t_ref)/2, junc);
+                            d_M_middle = self.samplePointsJunc(...
+                                t_start+(t_end-t_start)/2, junc);
                             
                             if abs( q_r1(i)*T_grid(i)/2 - d_M_middle(1) ) > entropyTol/2 ||...
                                 abs( q_r2(i)*T_grid(i)/2 - d_M_middle(2) ) > entropyTol/2
@@ -634,6 +645,7 @@ classdef postSolution < handle
                     
                     nonentropic_step = steps.(juncStr);
                     
+                    self.t_ref = self.net.network_junc.(juncStr).T_cum(nonentropic_step);
                     t_left = self.net.network_junc.(juncStr).T_cum(nonentropic_step);
                 
                     if nonentropic_step < num_steps
@@ -804,16 +816,16 @@ classdef postSolution < handle
             t_C = (t_L+t_R)/2;
             % If value not computed yet
             if isnan(M_interval(1))
-                M_L = self.samplePointsLink(t_L, t_L, link, bound);
+                M_L = self.samplePointsLink(t_L, link, bound);
             else
                 M_L = M_interval(1);
             end
             if isnan(M_interval(2))
-                M_R = self.samplePointsLink(t_L, t_R, link, bound);
+                M_R = self.samplePointsLink(t_R, link, bound);
             else
                 M_R = M_interval(2);
             end
-            M_C = self.samplePointsLink(t_L, t_C, link, bound);
+            M_C = self.samplePointsLink(t_C, link, bound);
             
             % Second, check if on a straight line, return []
             if self.onStraightLine([t_L; t_C; t_R], [M_L; M_C; M_R])
@@ -844,7 +856,7 @@ classdef postSolution < handle
                 if t_insct <= t_R && t_insct >= t_L
                     % if the intersection is in the time step, then
                     % validate, otherwise, move on to split
-                    M_validate = self.samplePointsLink(t_L, t_insct, link, bound);
+                    M_validate = self.samplePointsLink(t_insct, link, bound);
                     if abs(M_insct - M_validate) <= 1e-6
                         % found the intersection
                         t_found = [t_found; t_insct];
@@ -896,17 +908,17 @@ classdef postSolution < handle
             t_C = (t_L+t_R)/2;
             % If value not computed yet
             if isnan(M_interval(1))
-                M_L = self.samplePointsLink(t_L, t_L, link, bound);
+                M_L = self.samplePointsLink(t_L, link, bound);
             else
                 M_L = M_interval(1);
             end
             if isnan(M_interval(2))
-                M_L = self.samplePointsLink(t_L, t_R, link, bound);
+                M_R = self.samplePointsLink(t_R, link, bound);
             else
                 M_R = M_interval(2);
             end
             
-            M_C = self.samplePointsLink(t_L, t_C, link, bound);
+            M_C = self.samplePointsLink(t_C, link, bound);
             
             % Second, check if three points are on the same line
             if self.onStraightLine([t_L; t_C; t_R],[M_L; M_C; M_R])
@@ -954,7 +966,7 @@ classdef postSolution < handle
             
             % otherwise, compute slope
             slope = (y(3)-y(1))/(x(3)-x(1));
-            if slope*(x(2)-x(1)) + y(1) == y(2)
+            if abs(slope*(x(2)-x(1)) + y(1) - y(2)) <= 1.0e-6
                 TF = true;
             else
                 TF = false;
@@ -968,20 +980,19 @@ classdef postSolution < handle
         % This function basically samples the specified point at all links,
         % and then compute the entropic value based on the sending and
         % receiving function.
+        % Note the returned value is the vehicle id with reference to the
+        % time point self.t_ref
         % input: 
-        %        t_ref: float, the starting time of the nonentropy step, 
-        %               all vehicle labels are computed with reference to 
-        %               this point)
         %        t_sample: float, the time point to be sampled
         %        junc: the label of the junction to be sampled
         % output: 
         %       d_M: for connection, float, the entropic car ID at t_sample
         %            for merge/diverge, 2x1 float, the entropic car ID at
         %            two incoming/outgoing links
-        function d_M = samplePointsJunc(self, t_ref, t_sample, junc)
+        function d_M = samplePointsJunc(self, t_sample, junc)
             
             % t_ref is the reference point where M = 0
-            if t_sample == t_ref
+            if t_sample == self.t_ref
                 d_M = 0;
                 return
             end
@@ -996,8 +1007,8 @@ classdef postSolution < handle
                 % simply take the minimum of the sending and receiving of
                 % two links
                 
-                d_M = min(self.samplePointsLink(t_ref, t_sample, inLink,'downstream'),...
-                          self.samplePointsLink(t_ref, t_sample, outLink,'upstream'));
+                d_M = min(self.samplePointsLink(t_sample, inLink,'downstream'),...
+                          self.samplePointsLink(t_sample, outLink,'upstream'));
                 
             elseif strcmp(self.net.network_junc.(juncStr).type_junc,'merge')
                 
@@ -1010,9 +1021,9 @@ classdef postSolution < handle
                     self.net.network_junc.(juncStr).ratio(1);
                 
                 % here we extract the sending and receiving function
-                M_R = self.samplePointsLink(t_ref, t_sample, outLink, 'upstream');
-                M_S1 = self.samplePointsLink(t_ref, t_sample, inLinks(1), 'downstream');
-                M_S2 = self.samplePointsLink(t_ref, t_sample, inLinks(2), 'downstream');
+                M_R = self.samplePointsLink(t_sample, outLink, 'upstream');
+                M_S1 = self.samplePointsLink(t_sample, inLinks(1), 'downstream');
+                M_S2 = self.samplePointsLink(t_sample, inLinks(2), 'downstream');
                 
                 % case 1: M_S1 + M_S2 <= M_R, then through flow is
                 % M_s1 + M_s2
@@ -1045,9 +1056,9 @@ classdef postSolution < handle
                     self.net.network_junc.(juncStr).ratio(1);
                 
                 % here we extract the sending and receiving function
-                M_R1 = self.samplePointsLink(t_ref, t_sample, outLinks(1), 'upstream');
-                M_R2 = self.samplePointsLink(t_ref, t_sample, outLinks(2), 'upstream');
-                M_S = self.samplePointsLink(t_ref, t_samplw, inLink, 'downstream');
+                M_R1 = self.samplePointsLink(t_sample, outLinks(1), 'upstream');
+                M_R2 = self.samplePointsLink(t_sample, outLinks(2), 'upstream');
+                M_S = self.samplePointsLink(t_samplw, inLink, 'downstream');
                 
                 % case 1: M_R1 + M_R2 <= M_S, then through flow is
                 % M_R1+M_R2
@@ -1075,29 +1086,26 @@ classdef postSolution < handle
         
         %===============================================================
         % sample the boundary point of a link with respect to the reference
-        % point t_ref
+        % time self.t_ref at its corresponding bound.
         % input: 
-        %        t_ref: float, the starting time of the nonentropy step, 
-        %               all vehicle labels are computed with reference to 
-        %               this point
         %        t_sample: float, the boundary time to be sampled
         %        link: int, the link ID to be sampled
         %        bound: string, 'upstream', 'downstream', specify which
         %               boundary we would like to sample
         % output: M, ( a vector of vehicle IDs ).
-        function d_M = samplePointsLink(self, t_ref, t_sample, link, bound)
+        function M = samplePointsLink(self, t_sample, link, bound)
             global INDEX_UP INDEX_DOWN
             
             % since t_ref is the reference point, so simply 0
-            if t_sample == t_ref
-                d_M = 0;
+            if t_sample == self.t_ref
+                M = 0;
                 return
             end
             
             % save the absolute vehicle id on this link in M = [ 0; 0 ]
             M = ones(2,1)*NaN;
             
-            % compute the M of [t_ref t] on this link
+            % compute the M of t on this link
             %===============================================================
             % extract the fundamental diagram
             linkStr = sprintf('link_%d',link);
@@ -1158,7 +1166,7 @@ classdef postSolution < handle
             % if the sample is on the upstream bound
             if strcmp(bound,'upstream')
                 
-                if sum( self.net.network_hwy.(linkStr).T_us_cum > t_ref &...
+                if sum( self.net.network_hwy.(linkStr).T_us_cum > self.t_ref &...
                         self.net.network_hwy.(linkStr).T_us_cum < t_sample) ~= 0
                     % remove the last two pieces of upstream conditions
                     BC_us( max(1, num_us_pre_steps-1) : num_us_pre_steps, 3) = NaN; 
@@ -1170,7 +1178,7 @@ classdef postSolution < handle
             % if the sample is on the downstream bound
             elseif strcmp(bound,'downstream')
                 
-                if sum( self.net.network_hwy.(linkStr).T_ds_cum > t_ref &...
+                if sum( self.net.network_hwy.(linkStr).T_ds_cum > self.t_ref &...
                         self.net.network_hwy.(linkStr).T_ds_cum < t_sample ) ~= 0
                     % remove the last two pieces of downstream conditions
                     BC_ds( max(1,num_ds_pre_steps-1):num_ds_pre_steps , 3) = NaN;
@@ -1190,7 +1198,7 @@ classdef postSolution < handle
                 position = len_link;
             end
             
-            t_array = [ t_ref, t_sample];
+            t_array = [self.t_ref; t_sample];
             for i = 1:length(t_array)
                 %==========================================================
                 % compute the solution associated to the initial condition
@@ -1199,85 +1207,97 @@ classdef postSolution < handle
                 
                 %INITIAL==== <k_c ===========================================
                 % first check those conditions with <= k_c
-                inCharacterDomain = ( IC(lowerThanKc,1)+v_f*t_array(i) <= position &...
-                    IC(lowerThanKc,2)+v_f*t_array(i) >= position);
+                inCharacterDomain = IC(:,1)+v_f*t_array(i) <= position &...
+                                    IC(:,2)+v_f*t_array(i) >= position;
                 
-                inFanDomain = ( IC(lowerThanKc,1)+v_f*t_array(i) > position &...
-                    IC(lowerThanKc,1)+w*t_array(i) <= position);
+                % only applies to those <k_c
+                activeCharacterDomain = lowerThanKc & inCharacterDomain;
+                
+                inFanDomain = IC(:,1)+v_f*t_array(i) > position &...
+                              IC(:,1)+w*t_array(i) <= position;
+                
+                activeFanDomain = lowerThanKc & inFanDomain;
                 
                 % solution in characteristic domain
-                tmp_M = min( IC_cum_num_veh(inCharacterDomain,1) -...
-                    IC(inCharacterDomain,3).*(position - v_f*t_array(i) - ...
-                    IC(inCharacterDomain,1)) );
+                tmp_M = min( IC_cum_num_veh(activeCharacterDomain,1) -...
+                    IC(activeCharacterDomain,3).*(position - v_f*t_array(i) - ...
+                    IC(activeCharacterDomain,1)) );
                 M(i) = minNonEmpty(M(i), tmp_M);
                 % solution in fan domain
-                tmp_M = min( IC_cum_num_veh(inFanDomain,1) -...
+                tmp_M = min( IC_cum_num_veh(activeFanDomain,1) -...
                     k_c.*(position - v_f*t_array(i) - ...
-                    IC(inFanDomain,1)  )  );
+                    IC(activeFanDomain,1)  )  );
                 M(i) = minNonEmpty(M(i), tmp_M);
                 
                 %INITIAL==== >k_c ===========================================
                 % now check the initial condition with > k_c
-                inCharacterDomain = ( IC(greaterThanKc,1)+w*t_array(i) <= position &...
-                    IC(greaterThanKc,2)+w*t_array(i) >= position);
+                inCharacterDomain = IC(:,1)+w*t_array(i) <= position &...
+                                    IC(:,2)+w*t_array(i) >= position; 
+                activeCharacterDomain = greaterThanKc & inCharacterDomain;
                 
-                inFanDomain = ( IC(greaterThanKc,2)+v_f*t_array(i) > position &...
-                    IC(greaterThanKc,2)+w*t_array(i) <= position);
+                inFanDomain = IC(:,2)+v_f*t_array(i) > position &...
+                              IC(:,2)+w*t_array(i) <= position; 
+                activeFanDomain = greaterThanKc & inFanDomain;
                 
                 % solution in characteristic domain
-                tmp_M = min( IC_cum_num_veh(inCharacterDomain,1) -...
-                    IC(inCharacterDomain,3).*(position - w*t_array(i) - ...
-                    IC(inCharacterDomain,1)) -k_m*t_array(i)*w);
+                tmp_M = min( IC_cum_num_veh(activeCharacterDomain,1) -...
+                    IC(activeCharacterDomain,3).*(position - w*t_array(i) - ...
+                    IC(activeCharacterDomain,1)) -k_m*t_array(i)*w);
                 M(i) = minNonEmpty(M(i), tmp_M);
                 % solution in fan domain
-                tmp_M = min( IC_cum_num_veh(inFanDomain,1)+ IC_num_veh(inFanDomain,1)...
-                    - k_c.*(position - w*t_array(i) - IC(inFanDomain,2)) ...
+                tmp_M = min( IC_cum_num_veh(activeFanDomain,1)+ IC_num_veh(activeFanDomain,1)...
+                    - k_c.*(position - w*t_array(i) - IC(activeFanDomain,2)) ...
                     - k_m*t_array(i)*w);
                 M(i) = minNonEmpty(M(i), tmp_M);
                 
-                
                 %UPSTREAM==================================================
-                % now check the upstream conditions
+                % now check the upstream conditions, only apply those
+                % boundary conditions that are not NaN
                 notNaN = ~isnan(BC_us(:,3));
-                inCharacterDomain = ( BC_us(notNaN,1)+ position/v_f <= t_array(i) &...
-                    BC_us(notNaN,2)+ position/v_f >= t_array(i));
                 
-                inFanDomain = ( BC_us(notNaN,2)+ position/v_f < t_array(i) );
+                inCharacterDomain = BC_us(:,1)+ position/v_f <= t_array(i) &...
+                                    BC_us(:,2)+ position/v_f >= t_array(i); 
+                activeCharacterDomain = notNaN & inCharacterDomain;
+                
+                inFanDomain = BC_us(:,2)+ position/v_f < t_array(i);
+                activeFanDomain = notNaN & inFanDomain;
                 
                 % solution in characteristic domain
-                tmp_M = min( BC_cum_us_M(inCharacterDomain,1) +...
-                    BC_us(inCharacterDomain,3).*(t_array(i) - position/v_f - ...
-                    BC_us(inCharacterDomain,1)) );
+                tmp_M = min( BC_cum_us_M(activeCharacterDomain,1) +...
+                    BC_us(activeCharacterDomain,3).*(t_array(i) - position/v_f - ...
+                    BC_us(activeCharacterDomain,1)) );
                 M(i) = minNonEmpty(M(i), tmp_M);
                 % solution in fan domain
-                tmp_M = min( BC_cum_us_M(inFanDomain,1) +...
-                    BC_us_num_veh(inFanDomain,1) + ...
+                tmp_M = min( BC_cum_us_M(activeFanDomain,1) +...
+                    BC_us_num_veh(activeFanDomain,1) + ...
                     k_c*v_f.*(t_array(i) - position/v_f - ...
-                    BC_us(inFanDomain,2)) );
+                    BC_us(activeFanDomain,2)) );
                 M(i) = minNonEmpty(M(i), tmp_M);
                 
                 
                 %DOWNSTREAM==================================================
                 % now check the upstream conditions
                 notNaN = ~isnan(BC_ds(:,3));
-                inCharacterDomain = ( BC_ds(notNaN,1) + (position - len_link)/w <= t_array(i) &...
-                    BC_ds(notNaN,2)+ (position - len_link)/w >= t_array(i));
                 
-                inFanDomain = ( BC_ds(notNaN,2)+ (position - len_link)/w < t_array(i) );
+                inCharacterDomain = BC_ds(:,1) + (position - len_link)/w <= t_array(i) &...
+                                    BC_ds(:,2)+ (position - len_link)/w >= t_array(i);
+                activeCharacterDomain = notNaN & inCharacterDomain;
+                
+                inFanDomain = BC_ds(:,2)+ (position - len_link)/w < t_array(i);
+                activeFanDomain = notNaN & inFanDomain;
                 
                 % solution in characteristic domain
-                tmp_M = min( BC_cum_ds_M(inCharacterDomain,1) +...
-                    BC_ds(inCharacterDomain,3).*(t_array(i) -...
+                tmp_M = min( BC_cum_ds_M(activeCharacterDomain,1) +...
+                    BC_ds(activeCharacterDomain,3).*(t_array(i) -...
                     (position - len_link)/w - ...
-                    BC_us(inCharacterDomain,1))...
+                    BC_ds(activeCharacterDomain,1))...
                     - k_m*(position - len_link));
-                
                 M(i) = minNonEmpty(M(i), tmp_M);
                 % solution in fan domain
-                tmp_M = min( BC_cum_ds_M(inFanDomain,1) +...
-                    BC_ds_num_veh(inFanDomain,1) + ...
+                tmp_M = min( BC_cum_ds_M(activeFanDomain,1) +...
+                    BC_ds_num_veh(activeFanDomain,1) + ...
                     k_c*v_f.*(t_array(i) - (position-len_link)/v_f - ...
-                    BC_us(inFanDomain,2)) );
+                    BC_ds(activeFanDomain,2)) );
                 
                 M(i) = minNonEmpty(M(i), tmp_M);
                 
@@ -1287,7 +1307,7 @@ classdef postSolution < handle
             if all(~isnan(M)) && all(~isempty(M))
                 
                 % use car ID at t_ref as a reference
-                d_M = M(2) - M(1);
+                M = M(2) - M(1);
                 
             else
                 error('failed to sample points');
