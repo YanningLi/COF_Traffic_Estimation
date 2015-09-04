@@ -6,8 +6,9 @@
 % setIneqConstraints_grid.m for details.
 
 % Sep 01, 2015
-% Remark: this version does not support internal and density condition with
-% uneven discretization of the boundary flows.
+% Remark: this version does not support internal or density condition with
+% uneven discretization of the boundary flows. It also assume all sensors
+% have same level of accuracy.
 
 
 classdef setIneqConstraints
@@ -76,13 +77,25 @@ classdef setIneqConstraints
     
     methods
         
+        % This function set the inequality constraints of one link
+        % input: 
+        %       v, w, k_c, k_m: road parameters
+        %       postm: length in meters
+        %       start_time, end_time: start and end time of the simulation
+        %       qin_meas: column vector, float, upstream measuremnt data
+        %       qout_meas: column vector, float, downstream measuremnt data
+        %       T_in: column vector, float, the upstream time grid, same
+        %           length as qin_meas
+        %       T_out: column vector, float, downstream time grid
+        %       ini_segments: column vector, float, cumulative space grid
+        %       rho_ini: column vector, float, initial density 
+        %       e_max: the measurement error from the data
         function si = setIneqConstraints(...
                 v, w, k_c, k_m, postm,...
                 start_time, end_time,...
                 qin_meas, qout_meas,...
-                ini_segments, rho_ini, e_max)
-            global T_MIN T_MAX
-            
+                T_in, T_out,...
+                ini_segments, rho_ini, e_max)            
             
             si.n_max_us = size(qin_meas,1);   % boundary conditions
             si.n_max_ds = size(qout_meas,1);
@@ -103,10 +116,10 @@ classdef setIneqConstraints
             si.chi = postm;
             
             % if still using uniform discretization
-            si.T_us = qin_meas(:,T_MAX)-qin_meas(:,T_MIN);
-            si.T_us_cum = [0; qin_meas(:,T_MAX)];
-            si.T_ds = qout_meas(:,T_MAX)-qout_meas(:,T_MIN);
-            si.T_ds_cum = [0; qout_meas(:,T_MAX)];
+            si.T_us = T_in;
+            si.T_us_cum = [0; cumsum(T_in)];
+            si.T_ds = T_out;
+            si.T_ds_cum = [0; cumsum(T_out)];
             
             
             % set boundary condition
@@ -127,7 +140,7 @@ classdef setIneqConstraints
             si.t_u = [];
             si.dens_meas = [];
             
-            si.e_max = e_max;   % assume 0 error from the data
+            si.e_max = e_max;   
             
             % set initial condition
             if ~iscolumn(ini_segments)
@@ -1518,9 +1531,7 @@ classdef setIneqConstraints
         % output: the data constraints matrix
         
         function [list2] = setDataMatrix(si)
-            
-            global FLUX
-            
+                        
             %Use sparse matrix to speed up computation
             list2 = zeros(10000,si.size_row);
             rows = 0;   %initialize row counts
@@ -1529,10 +1540,10 @@ classdef setIneqConstraints
             if (~isempty(si.qin_meas))
                 
                 for n=1:si.n_max_us
-                    if ~isnan(si.qin_meas(n, FLUX))
+                    if ~isnan(si.qin_meas(n))
                         array = zeros(1,si.size_row);
                         array(1,n) = 1;
-                        array(1,si.size_row) = si.qin_meas(n,FLUX)*(1-si.e_max);
+                        array(1,si.size_row) = si.qin_meas(n)*(1-si.e_max);
                         
                         rows = rows+1;
                         list2(rows,:)=array;
@@ -1540,10 +1551,10 @@ classdef setIneqConstraints
                 end
                 
                 for n=1:si.n_max_us
-                    if ~isnan(si.qin_meas(n, FLUX))
+                    if ~isnan(si.qin_meas(n))
                     array = zeros(1,si.size_row);
                     array(1,n) = -1;
-                    array(1,si.size_row) = -si.qin_meas(n,FLUX)*(1+si.e_max);
+                    array(1,si.size_row) = -si.qin_meas(n)*(1+si.e_max);
                     rows = rows+1;
                     list2(rows,:)=array;
                     end
@@ -1555,20 +1566,20 @@ classdef setIneqConstraints
             if (~isempty(si.qout_meas) )
                 
                 for n=1:si.n_max_ds
-                    if ~isnan(si.qout_meas(n,FLUX))
+                    if ~isnan(si.qout_meas(n))
                     array = zeros(1,si.size_row);
                     array(1,si.n_max_us + n) = 1;
-                    array(1,si.size_row) = si.qout_meas(n,FLUX)*(1-si.e_max);
+                    array(1,si.size_row) = si.qout_meas(n)*(1-si.e_max);
                     rows = rows+1;
                     list2(rows,:)=array;
                     end
                 end
                 
                 for n=1:si.n_max_ds
-                    if ~isnan(si.qout_meas(n,FLUX))
+                    if ~isnan(si.qout_meas(n))
                     array = zeros(1,si.size_row);
                     array(1,si.n_max_ds + n) = -1;
-                    array(1,si.size_row) = -si.qout_meas(n,FLUX)*(1+si.e_max);
+                    array(1,si.size_row) = -si.qout_meas(n)*(1+si.e_max);
                     rows = rows+1;
                     list2(rows,:)=array;
                     end

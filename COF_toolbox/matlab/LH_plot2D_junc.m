@@ -1,6 +1,12 @@
-% function for plotting junctions
+% Yanning Li, Sep 02, 2015
+% This function plot the 2D time space diagram of a junction
+% If the junctin is connection, the timespace diagram of two links are
+% concatenated together.
+% If the junction is merge of diverge, it will plot a 1x2 subplots, left is
+% the concatenated 1->2, and right is the 1->3 (merge).
 
-function [C,h] =LH_plot2D_junc_dis(varargin)
+
+function [C,h] =LH_plot2D_junc(varargin)
 
 if nargin==11
     % merge or diverge, plot two figures
@@ -44,10 +50,6 @@ if nargin==11
     end
     
     % Plot T marks
-    % if even discretization over time, then transform to vector
-    if length(T_cum)==1
-        T_cum = (0:num_steps)*T_cum;
-    end
     for i = 1:num_steps
         plot([T_cum(i+1) T_cum(i+1)],[middleX(1)-middleX(1)/50 middleX(1)+middleX(1)/50],...
             'k','LineWidth',2);
@@ -85,9 +87,6 @@ if nargin==11
     
     % Plot T marks
     % if even discretization over time, then transform to vector
-    if length(T_cum)==1
-        T_cum = (0:num_steps)*T_cum;
-    end
     
     for i = 1:num_steps
         plot([T_cum(i+1) T_cum(i+1)],...
@@ -138,11 +137,6 @@ elseif nargin==8
     end
     
     % Plot T marks
-    % if even discretization over time, then transform to vector
-    if length(T_cum)==1
-        T_cum = (0:num_steps)*T_cum;
-    end
-    
     for i = 1:num_steps
         plot([T_cum(i+1) T_cum(i+1)],...
             [middleX-middleX/50 middleX+middleX/50],...
