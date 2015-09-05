@@ -247,8 +247,8 @@ classdef postSolution < handle
                     % Normalize density
                     % kc=>0.5, km=>1
                     link1 = sprintf('link_%d',self.net.network_junc.(juncStr).inlabel(1));
-                    k_c_tmp = self.net.network_hwy.(link1).paras(K_C_PARA);
-                    k_m_tmp = self.net.network_hwy.(link1).paras(K_M_PARA);
+                    k_c_tmp = self.net.network_hwy.(link1).para_kc;
+                    k_m_tmp = self.net.network_hwy.(link1).para_kc;
                     kNorm1 = mapping(self.k.(link1),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
                         [0 0.5; 0.6 1]);
@@ -292,7 +292,7 @@ classdef postSolution < handle
                         self.t_mesh_s, xScaleLeft, xScaleRight,...
                         NLeft, kLeft, NRight, kRight, self.net.network_junc.(juncStr));
                     h = suptitle(sprintf('Total Flow: %f\n Number of steps: %d \n Penalty: %f',...
-                        tt_flow, length(self.net.network_junc.(juncStr).T)), tt_pen);
+                        tt_flow, length(self.net.network_junc.(juncStr).T), tt_pen));
                     set(h,'FontSize',24)
                     
                     
@@ -423,6 +423,11 @@ classdef postSolution < handle
         %===============================================================
         % Analytically check if the solution is entropy solution, that is,
         % the throughput flow is maximized at all time steps.
+        % NOTE: This function is meant to find the nonentropic solution due
+        % to the boundary discretization. If the entropic objective is not
+        % added to the objective function, then the optimal solution may be
+        % non-entropic at some steps. In this case, this function will
+        % simply return a warning.
         % Intuition: using Moskowitz function, we can analytically compute
         % the sending and receiving function at each boundary
         % discretization point, then compare if we hold back any flow
@@ -459,7 +464,8 @@ classdef postSolution < handle
                 % Here consider connection case
                 if strcmp(self.net.network_junc.(juncStr).type_junc,'connection')
                     
-                    linkStr = sprintf('link_%d', self.net.network_junc.(juncStr).outlabel);
+                    outlink = self.net.network_junc.(juncStr).outlabel;
+                    linkStr = sprintf('link_%d', outlink);
                     
                     % extract the thru flow value which is downstream
                     % inflow in the connection case
@@ -482,24 +488,30 @@ classdef postSolution < handle
                         
                         if abs(q_thru(i)*T_grid(i)-d_M) > entropyTol
                             % difference greater than the tolerance
-                            TF = false;
-                            steps.(juncStr) = i;
-                            break
-                        else
-                            % If the first half sends more and second half
-                            % sends less, then the average may be same as
-                            % the entropic solution.
-                            % Hence, double check at the middle of the step
-                            d_M_middle = self.samplePointsJunc(...
-                                t_start+(t_end-t_start)/2, junc);
+                            % This may due to the discretization or we
+                            % simply did not add entropic component in the
+                            % objective function
+                            t_C = (t_start+t_end)/2;
+                            d_M_C = self.samplePointsJunc(t_C, junc);
                             
-                            if abs(q_thru(i)*T_grid(i)/2 - d_M_middle) > entropyTol/2 ||...
-                                    abs(q_thru(i)*T_grid(i)/2 - (d_M - d_M_middle) ) > entropyTol/2
-                                % not entropy
+                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C, d_M]')
+                                % meaning caused by not setting entropic
+                                % solution or traffic control
+                                warning('WARNING: Step %d is not entropic\n', i);
+                                continue
+                            else
                                 TF = false;
                                 steps.(juncStr) = i;
                                 break
                             end
+                            
+                        else
+                            % If the first half sends more and second half
+                            % sends less, then the average may be same as
+                            % the entropic solution. In this case, the
+                            % affected domain of the discretization error
+                            % is small. we treat this as entropic
+                            continue
                         end
                     end     %end each step
                     
@@ -529,21 +541,28 @@ classdef postSolution < handle
                                 abs( q_s2(i)*T_grid(i)-d_M(2) ) > entropyTol
                             % does not match the unique solution from the
                             % sampling approach
-                            TF = false;
-                            steps.(juncStr) = i;
-                            break
-                        else
-                            % doubel check the middle points
-                            d_M_middle = self.samplePointsJunc(...
-                                t_start+(t_end-t_start)/2, junc);
+                            t_C = (t_start+t_end)/2;
+                            d_M_C = self.samplePointsJunc(t_C, junc);
                             
-                            if abs( q_s1(i)*T_grid(i)/2 - d_M_middle(1) ) > entropyTol/2 ||...
-                                abs( q_s2(i)*T_grid(i)/2 - d_M_middle(2) ) > entropyTol/2
+                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M(1)]') &&...
+                                  self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M(2)]')  
+                                % meaning caused by not setting entropic
+                                % solution or traffic control
+                                warning('WARNING: Step %d is not entropic\n', i);
+                                continue
+                            else
                                 TF = false;
                                 steps.(juncStr) = i;
                                 break
                             end
                             
+                        else
+                            % If the first half sends more and second half
+                            % sends less, then the average may be same as
+                            % the entropic solution. In this case, the
+                            % affected domain of the discretization error
+                            % is small. we treat this as entropic
+                            continue
                         end
                     end     % end each step
                     
@@ -573,20 +592,28 @@ classdef postSolution < handle
                                 abs( q_r2(i)*T_grid(i)-d_M(2) ) > entropyTol
                             % does not match the unique solution from the
                             % sampling approach
-                            TF = false;
-                            steps.(juncStr) = i;
-                            break
-                        else
-                            % doubel check the middle points
-                            d_M_middle = self.samplePointsJunc(...
-                                t_start+(t_end-t_start)/2, junc);
+                            t_C = (t_start+t_end)/2;
+                            d_M_C = self.samplePointsJunc(t_C, junc);
                             
-                            if abs( q_r1(i)*T_grid(i)/2 - d_M_middle(1) ) > entropyTol/2 ||...
-                                abs( q_r2(i)*T_grid(i)/2 - d_M_middle(2) ) > entropyTol/2
+                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M(1)]') && ...
+                               self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M(2)]')
+                                % meaning caused by not setting entropic
+                                % solution or traffic control
+                                warning('WARNING: Step %d is not entropic\n', i);
+                                continue
+                            else
                                 TF = false;
                                 steps.(juncStr) = i;
+                                break
                             end
                             
+                        else
+                            % If the first half sends more and second half
+                            % sends less, then the average may be same as
+                            % the entropic solution. In this case, the
+                            % affected domain of the discretization error
+                            % is small. we treat this as entropic
+                            continue
                         end
                     end     % end each step
                     

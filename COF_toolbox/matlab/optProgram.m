@@ -400,7 +400,7 @@ classdef optProgram < handle
                     
                     % compute the exponential factor
                     T_junc = net.network_junc.(juncStr).T;
-                    if R_priority <1
+                    if R_priority <= 1
                         E = ( (R_priority+2)*max(T_junc)/min(T_junc) + 1 )...
                                 /( R_priority + 1 ) + 0.1;
                     else
@@ -441,7 +441,8 @@ classdef optProgram < handle
                                 self.dv_index.(linkStr)(2, INDEX_UP),1) =...
                                 weight.*T_junc;
                         end
-                   
+                    end
+                    
                     self.f = self.f - alpha_pri*f_junc;
                     
                     % add the component: sum w(i) x T(i) x beta x e(i)
@@ -449,9 +450,8 @@ classdef optProgram < handle
                     self.f = self.f + beta_pri*[ zeros(self.dv_index.(juncStr)(1)-1,1);...
                         weight.*T_junc;...
                         zeros( self.dv_index_max - self.dv_index.(juncStr)(2) ,1)];
-                    end
                     
-                end     %end for each junction
+                end     
             
             end
         end
