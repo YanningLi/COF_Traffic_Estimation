@@ -206,10 +206,10 @@ classdef optProgram < handle
                         tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= -1;
                         
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).inlabel(2));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= -1;
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).inlabel(1));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= R_priority;
-                        tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= R_priority;
+                        tmpMatrix(num_row+2, self.dv_index.(juncStr)(1) - 1 + step)= 1;
                              
                     end
                     
@@ -229,10 +229,10 @@ classdef optProgram < handle
                         tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= -1;
                         
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).outlabel(2));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= -1;
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).outlabel(1));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= R_priority;
-                        tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= R_priority;
+                        tmpMatrix(num_row+2, self.dv_index.(juncStr)(1) - 1 + step)= -1;
 
                     end
                         
@@ -396,27 +396,21 @@ classdef optProgram < handle
                     R_priority = net.network_junc.(juncStr).ratio(2)...
                         /net.network_junc.(juncStr).ratio(1);
                     
-                    beta_pri = 1;
+                    beta = 1;
                     
-                    % compute the exponential factor
+                    % compute the alpha and exponential factor
+                    % see derive_parameters.pdf for details.
                     T_junc = net.network_junc.(juncStr).T;
                     if R_priority <= 1
-                        E = ( (R_priority+2)*max(T_junc)/min(T_junc) + 1 )...
-                                /( R_priority + 1 ) + 0.1;
+                        % Given beta = 1
+                        alpha = 2 + R_priority;
+                        E = (alpha + 1)/(1+R_priority) + 0.1;
                     else
-                        E = ( R_priority + (1+2*R_priority)*max(T_junc)/min(T_junc) )...
-                            /( R_priority + 1 ) + 0.1;
+                        % given beta = 1
+                        alpha = 1 + 2*R_priority;
+                        E = (alpha + R_priority)/(1+R_priority) + 0.1;
                     end
-                    
-                    % compute the alpha parameter
-                    if R_priority <=1
-                        alpha_pri = 0.5*( (E+1)*beta_pri/(E-1) +...
-                            (E+E*R_priority-1)*beta_pri );
-                    else
-                        alpha_pri = 0.5*( R_priority*(E+1)*beta_pri/(E-1) + ...
-                            (E+E*R_priority-R_priority)*beta_pri );
-                    end
-                    
+
                     % generate the weight vector
                     weight = 0.01*ones(num_steps, 1);
                     for j = 1:num_steps-1
@@ -443,11 +437,11 @@ classdef optProgram < handle
                         end
                     end
                     
-                    self.f = self.f - alpha_pri*f_junc;
+                    self.f = self.f - alpha*f_junc;
                     
                     % add the component: sum w(i) x T(i) x beta x e(i)
                     % Use e = |q1-Rq2|
-                    self.f = self.f + beta_pri*[ zeros(self.dv_index.(juncStr)(1)-1,1);...
+                    self.f = self.f + beta*[ zeros(self.dv_index.(juncStr)(1)-1,1);...
                         weight.*T_junc;...
                         zeros( self.dv_index_max - self.dv_index.(juncStr)(2) ,1)];
                     
@@ -486,7 +480,7 @@ classdef optProgram < handle
         
         
         %===============================================================
-        % maximum downstream flow for one link
+        % maximize downstream flow for one link
         function maxDownflow(self, net, links)
             global INDEX_DOWN
             
@@ -513,6 +507,33 @@ classdef optProgram < handle
         end
         
         
+        
+        %===============================================================
+        % minimize downstream flow for one link
+        function minDownflow(self, net, links)
+            global INDEX_DOWN
+            
+            if isempty(self.f)
+                % if not defiend by any function yet
+                self.f = zeros(self.dv_index_max,1);
+            end
+            
+            f_downflow = zeros(self.dv_index_max,1);
+            
+            for link = links'
+                
+                linkStr = sprintf('link_%d', link);
+                
+                T_grid = net.network_hwy.(linkStr).T_ds;
+            
+                num_steps = length(T_grid);
+                f_downflow(self.dv_index.(linkStr)(1,INDEX_DOWN):...
+                         self.dv_index.(linkStr)(2,INDEX_DOWN)) = -(num_steps:-1:1)'.*T_grid;
+            end
+            
+            self.f = self.f - f_downflow;
+ 
+        end
 
         
     end

@@ -248,24 +248,24 @@ classdef postSolution < handle
                     % kc=>0.5, km=>1
                     link1 = sprintf('link_%d',self.net.network_junc.(juncStr).inlabel(1));
                     k_c_tmp = self.net.network_hwy.(link1).para_kc;
-                    k_m_tmp = self.net.network_hwy.(link1).para_kc;
+                    k_m_tmp = self.net.network_hwy.(link1).para_km;
                     kNorm1 = mapping(self.k.(link1),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     link2 = sprintf('link_%d',self.net.network_junc.(juncStr).inlabel(2));
                     k_c_tmp = self.net.network_hwy.(link2).para_kc;
                     k_m_tmp = self.net.network_hwy.(link2).para_km;
                     kNorm2 = mapping(self.k.(link2),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     link3 = sprintf('link_%d',self.net.network_junc.(juncStr).outlabel);
                     k_c_tmp = self.net.network_hwy.(link3).para_kc;
                     k_m_tmp = self.net.network_hwy.(link3).para_km;
                     kNorm3 = mapping(self.k.(link3),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     kLeft = [kNorm1 kNorm3];
                     kRight = [kNorm2 kNorm3];
@@ -322,14 +322,14 @@ classdef postSolution < handle
                     k_m_tmp = self.net.network_hwy.(link1).para_km;
                     kNorm1 = mapping(self.k.(link1),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     link2 = sprintf('link_%d',self.net.network_junc.(juncStr).outlabel(1));
                     k_c_tmp = self.net.network_hwy.(link2).para_kc;
                     k_m_tmp = self.net.network_hwy.(link2).para_km;
                     kNorm2 = mapping(self.k.(link2),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     link3 = sprintf('link_%d',self.net.network_junc.(juncStr).outlabel(2));
                     k_c_tmp = self.net.network_hwy.(link3).para_kc;
@@ -382,14 +382,14 @@ classdef postSolution < handle
                     k_m_tmp = self.net.network_hwy.(link1).para_km;
                     kNorm1 = mapping(self.k.(link1),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     link2 = sprintf('link_%d',self.net.network_junc.(juncStr).outlabel);
                     k_c_tmp = self.net.network_hwy.(link2).para_kc;
                     k_m_tmp = self.net.network_hwy.(link2).para_km;
                     kNorm2 = mapping(self.k.(link2),...
                         [0 k_c_tmp+0.00001; k_c_tmp+0.00001 k_m_tmp],...
-                        [0 0.5; 0.6 1]);
+                        [0 0.5; 0.5 1]);
                     
                     kComb = [kNorm1 kNorm2];
                     
@@ -492,7 +492,7 @@ classdef postSolution < handle
                             % simply did not add entropic component in the
                             % objective function
                             t_C = (t_start+t_end)/2;
-                            d_M_C = self.samplePointsJunc(t_C, junc);
+                            d_M_C = self.samplePointsLink(t_C, outlink, 'upstream');
                             
                             if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C, d_M]')
                                 % meaning caused by not setting entropic
@@ -518,12 +518,11 @@ classdef postSolution < handle
                 elseif strcmp(self.net.network_junc.(juncStr).type_junc,'merge')
                     
                     % extract the outflow of the two incoming links
-                    linkStr = sprintf('link_%d',...
-                        self.net.network_junc.(juncStr).inlabel(1));
+                    inlinks = self.net.network_junc.(juncStr).inlabel;
+                    linkStr = sprintf('link_%d',inlinks(1));
                     q_s1 = self.x(self.dv_index.(linkStr)(1,INDEX_DOWN):...
                                  self.dv_index.(linkStr)(2,INDEX_DOWN) );
-                    linkStr = sprintf('link_%d',...
-                        self.net.network_junc.(juncStr).inlabel(2));
+                    linkStr = sprintf('link_%d',inlinks(2));
                     q_s2 = self.x(self.dv_index.(linkStr)(1,INDEX_DOWN):...
                                  self.dv_index.(linkStr)(2,INDEX_DOWN) );
                     
@@ -542,7 +541,8 @@ classdef postSolution < handle
                             % does not match the unique solution from the
                             % sampling approach
                             t_C = (t_start+t_end)/2;
-                            d_M_C = self.samplePointsJunc(t_C, junc);
+                            d_M_C = [self.samplePointsLink(t_C, inlinks(1), 'downstream');
+                                     self.samplePointsLink(t_C, inlinks(2), 'downstream');];
                             
                             if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M(1)]') &&...
                                   self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M(2)]')  
@@ -569,12 +569,11 @@ classdef postSolution < handle
                 elseif strcmp(self.net.network_junc.(juncStr).type_junc,'diverge')
                                         
                     % extract the outflow of the two incoming links
-                    linkStr = sprintf('link_%d',...
-                        self.net.network_junc.(juncStr).outlabel(1));
+                    outlinks = self.net.network_junc.(juncStr).outlabel;
+                    linkStr = sprintf('link_%d',outlinks(1));
                     q_r1 = self.x(self.dv_index.(linkStr)(1,INDEX_UP):...
                                  self.dv_index.(linkStr)(2,INDEX_UP) );
-                    linkStr = sprintf('link_%d',...
-                        self.net.network_junc.(juncStr).outlabel(2));
+                    linkStr = sprintf('link_%d',outlinks(2));
                     q_r2 = self.x(self.dv_index.(linkStr)(1,INDEX_UP):...
                                  self.dv_index.(linkStr)(2,INDEX_UP) );
                     
@@ -593,7 +592,8 @@ classdef postSolution < handle
                             % does not match the unique solution from the
                             % sampling approach
                             t_C = (t_start+t_end)/2;
-                            d_M_C = self.samplePointsJunc(t_C, junc);
+                            d_M_C = [self.samplePointsLink(t_C, outlinks(1), 'upstream');
+                                     self.samplePointsLink(t_C, outlinks(2), 'upstream');];
                             
                             if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M(1)]') && ...
                                self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M(2)]')
@@ -856,7 +856,21 @@ classdef postSolution < handle
             
             % Second, check if on a straight line, return []
             if self.onStraightLine([t_L; t_C; t_R], [M_L; M_C; M_R])
-                return
+                % double check if on a straight line. Some times, the
+                % segments are symmetric and those 3 points are on the same
+                % line, but the sending function is not a line
+                t_Q_1 = t_L + (t_R-t_L)/4;      % first quarter
+                t_Q_3 = t_L + 3*(t_R-t_L)/4;    % third quarter
+                
+                M_Q_1 = self.samplePointsLink(t_Q_1, link, bound);
+                M_Q_3 = self.samplePointsLink(t_Q_3, link, bound);
+                
+                if self.onStraightLine([t_L; t_Q_1; t_C], [M_L; M_Q_1; M_C]) &&...
+                   self.onStraightLine([t_C; t_Q_3; t_R], [M_C; M_Q_3; M_R])
+                    % sampled 5 points on the same line, then very likely
+                    % to be a straight line
+                    return
+                end
             end
             
             % Third, find the left and right slope and compute the
