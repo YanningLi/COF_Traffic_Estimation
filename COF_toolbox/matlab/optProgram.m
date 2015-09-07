@@ -200,15 +200,15 @@ classdef optProgram < handle
                             
                         num_row = size(tmpMatrix,1);
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).inlabel(2));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= 1;
+                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= -1;
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).inlabel(1));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= -R_priority;
-                        tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= -1;
+                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= R_priority;
+                        tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= 1;
                         
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).inlabel(2));
-                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= 1;
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).inlabel(1));
-                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= R_priority;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_DOWN) + step - 1)= -R_priority;
                         tmpMatrix(num_row+2, self.dv_index.(juncStr)(1) - 1 + step)= 1;
                              
                     end
@@ -223,16 +223,16 @@ classdef optProgram < handle
                             
                         num_row = size(tmpMatrix,1);
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).outlabel(2));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= 1;
+                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= -1;
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).outlabel(1));
-                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= -R_priority;
-                        tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= -1;
+                        tmpMatrix(num_row+1, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= R_priority;
+                        tmpMatrix(num_row+1, self.dv_index.(juncStr)(1) - 1 + step)= 1;
                         
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).outlabel(2));
-                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= 1;
                         linkStr = sprintf('link_%d',net.network_junc.(juncStr).outlabel(1));
-                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= R_priority;
-                        tmpMatrix(num_row+2, self.dv_index.(juncStr)(1) - 1 + step)= -1;
+                        tmpMatrix(num_row+2, self.dv_index.(linkStr)(1, INDEX_UP) + step-1)= -R_priority;
+                        tmpMatrix(num_row+2, self.dv_index.(juncStr)(1) - 1 + step)= 1;
 
                     end
                         
@@ -534,6 +534,30 @@ classdef optProgram < handle
             self.f = self.f - f_downflow;
  
         end
+        
+        %===============================================================
+        % maximize the error caused by not following the rules
+        function maxError(self,juncs)
+            
+            if isempty(self.f)
+                % if not defiend by any function yet
+                self.f = zeros(self.dv_index_max,1);
+            end
+            
+            f_error = zeros(self.dv_index_max,1);
+            
+            for junc = juncs'
+                
+                juncStr = sprintf('junc_%d', junc);
+                            
+                f_error(self.dv_index.(juncStr)(1):...
+                        self.dv_index.(juncStr)(2)) = -1;
+            end
+            
+            self.f = self.f + f_error;
+ 
+        end
+        
 
         
     end

@@ -19,7 +19,7 @@ profile on
 %===============================================================
 % configuration paramters
 runCtrl = 'no_control'; % This parameter can be later used for optimal control 
-entropyTolerance = 1; % number of vehicles that we would consider as entropic solution
+entropyTolerance = 0.2; % number of vehicles that we would consider as entropic solution
 
 sim_steps = 5;
 step_length = 30;   % seconds
@@ -89,7 +89,7 @@ q2_us_TF = [T_BC_cum(1:sim_steps), T_BC_cum(2:sim_steps+1), q2_us_data];
 % Flags for iteratively updating time discretization
 getEntropy = false;
 loopCounter = 0;
-while getEntropy == false && loopCounter <=10
+while getEntropy == false && loopCounter <=50
     
     loopCounter = loopCounter+1;
     
@@ -130,7 +130,8 @@ while getEntropy == false && loopCounter <=10
     LP.addEntropy(net, 1);
     % LP.maxUpflow([1 2 4]);
     % LP.minDownflow(net, 1);
-    LP.maxDownflow(net, [1;2]);
+    % LP.maxDownflow(net, [1; 2]);
+    % LP.maxError(1);
     %===============================================================    
     toc
     

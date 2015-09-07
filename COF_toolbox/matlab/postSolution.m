@@ -491,10 +491,14 @@ classdef postSolution < handle
                             % This may due to the discretization or we
                             % simply did not add entropic component in the
                             % objective function
+                            d_M_SR = [self.samplePointsLink(t_end, inlink, 'downstream');
+                                      self.samplePointsLink(t_end, outlink, 'upstream')];
                             t_C = (t_start+t_end)/2;
-                            d_M_C = self.samplePointsLink(t_C, outlink, 'upstream');
+                            d_M_C = [self.samplePointsLink(t_C, inlink, 'downstream');
+                                     self.samplePointsLink(t_C, outlink, 'upstream')];
                             
-                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C, d_M]')
+                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M_SR(1)]') && ...
+                               self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M_SR(2)]')     
                                 % meaning caused by not setting entropic
                                 % solution or traffic control
                                 warning('WARNING: Step %d is not entropic\n', i);
@@ -519,6 +523,7 @@ classdef postSolution < handle
                     
                     % extract the outflow of the two incoming links
                     inlinks = self.net.network_junc.(juncStr).inlabel;
+                    outlink = self.net.network_junc.(juncStr).outlabel;
                     linkStr = sprintf('link_%d',inlinks(1));
                     q_s1 = self.x(self.dv_index.(linkStr)(1,INDEX_DOWN):...
                                  self.dv_index.(linkStr)(2,INDEX_DOWN) );
@@ -540,12 +545,20 @@ classdef postSolution < handle
                                 abs( q_s2(i)*T_grid(i)-d_M(2) ) > entropyTol
                             % does not match the unique solution from the
                             % sampling approach
+                            % the sending and receiving functions on the
+                            % links, just to check there is not
+                            % intersection on any three links
+                            d_M_SR = [self.samplePointsLink(t_end, inlinks(1), 'downstream');
+                                      self.samplePointsLink(t_end, inlinks(2), 'downstream');
+                                      self.samplePointsLink(t_end, outlink, 'upstream')];
                             t_C = (t_start+t_end)/2;
                             d_M_C = [self.samplePointsLink(t_C, inlinks(1), 'downstream');
-                                     self.samplePointsLink(t_C, inlinks(2), 'downstream');];
+                                     self.samplePointsLink(t_C, inlinks(2), 'downstream');
+                                     self.samplePointsLink(t_C, outlink, 'upstream')];
                             
-                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M(1)]') &&...
-                                  self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M(2)]')  
+                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M_SR(1)]') &&...
+                                  self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M_SR(2)]') &&...
+                                  self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(3), d_M_SR(3)]')
                                 % meaning caused by not setting entropic
                                 % solution or traffic control
                                 warning('WARNING: Step %d is not entropic\n', i);
@@ -570,6 +583,7 @@ classdef postSolution < handle
                                         
                     % extract the outflow of the two incoming links
                     outlinks = self.net.network_junc.(juncStr).outlabel;
+                    inlink = self.net.network_junc.(juncStr).inlabel;
                     linkStr = sprintf('link_%d',outlinks(1));
                     q_r1 = self.x(self.dv_index.(linkStr)(1,INDEX_UP):...
                                  self.dv_index.(linkStr)(2,INDEX_UP) );
@@ -591,12 +605,17 @@ classdef postSolution < handle
                                 abs( q_r2(i)*T_grid(i)-d_M(2) ) > entropyTol
                             % does not match the unique solution from the
                             % sampling approach
+                            d_M_SR = [self.samplePointsLink(t_end, outlinks(1), 'upstream');
+                                      self.samplePointsLink(t_end, outlinks(2), 'upstream');
+                                      self.samplePointsLink(t_end, inlink, 'downstream')];
                             t_C = (t_start+t_end)/2;
                             d_M_C = [self.samplePointsLink(t_C, outlinks(1), 'upstream');
-                                     self.samplePointsLink(t_C, outlinks(2), 'upstream');];
+                                     self.samplePointsLink(t_C, outlinks(2), 'upstream');
+                                     self.samplePointsLink(t_C, inlink, 'downstream');];
                             
-                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M(1)]') && ...
-                               self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M(2)]')
+                            if self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(1), d_M_SR(1)]') && ...
+                               self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(2), d_M_SR(2)]') && ...
+                               self.onStraightLine([t_start, t_C, t_end]',[0, d_M_C(3), d_M_SR(3)]')
                                 % meaning caused by not setting entropic
                                 % solution or traffic control
                                 warning('WARNING: Step %d is not entropic\n', i);
