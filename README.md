@@ -7,9 +7,7 @@ This code can be used for traffic estimation on a network (connection, merge, di
 
 ### Features:
 1. This code supports uneven discretization of both time and space. 
-
 2. The matlab scripts will be too complicated in a large problem. Hence, those code are completely rewritten in classes. 
-
 3. This code changed all indexing to dictionaries using MATLAB struct feature.
 
 ### Remarks:
