@@ -31,16 +31,15 @@ script: This script defines the network and application. Run as main function.
 
 ### Installation:
 1. Install CPLEX.
-
 2. Add the following path to MATLAB:
----- (CPLEX installation folder)/IBM/ILOG/CPLEX_Stuidio1262/cplex/matlab
----- (this toolbox folder)
----- (this toolbox folder)/COF_toolbox/matlab
----- (this toolbox folder)/UCBerkeley_LWR_solver/matlab_package/source
+- (CPLEX installation folder)/IBM/ILOG/CPLEX_Stuidio1262/cplex/matlab
+- (this toolbox folder)
+- (this toolbox folder)/COF_toolbox/matlab
+- (this toolbox folder)/UCBerkeley_LWR_solver/matlab_package/source
 
 ### Run the examples:
   Simply run the example scripts in MATLAB.
 Three exampels are provided, respectively
-- fwd_sim_one_link.m: the estimation of traffic density on one link.__
+- fwd_sim_one_link.m: the estimation of traffic density on one link.
 - fwd_sim_two_links.m: the estimation of traffic density on two links (a connection).
 - fwd_sim_merge.m: the estimation of traffic density on a merge network (two links in and one link out).
