@@ -1,28 +1,37 @@
 Yanning Li, Sep 01, 2015
 emlynlyn@gmail.com
 
-Traffic estimation based on convex optimizatoin framework.
+## Traffic estimation based on convex optimizatoin framework.
 
 This code can be used for traffic estimation on a network (connection, merge, diverge), given the boudnary conditions. 
 
-Features:
+# Features:
 1. This code supports uneven discretization of both time and space. 
+
 2. The matlab scripts will be too complicated in a large problem. Hence, those code are completely rewritten in classes. 
+
 3. This code changed all indexing to dictionaries using MATLAB struct feature.
 
-Remarks:
+# Remarks:
 1. This version only supports initial and boundary conditins.
+
 2. This version only support three types of uncontrolled junctions: connection, merge, diverge.
+
 3. A more complte version is under development which supports controlled ramps, model predictive control, internal and density conditions, and various modifications to improve the readability and reliability of the code.
 
-Structure of the code:
+
+# Structure of the code:
 script: This script defines the network and application. Run as main function.
+
 ---- initNetwork: the class that contains all necessary topology information and data for a network.
+
 ---- optProgram: the class that builds an optimization program and output solutions.
+
 ---- postSolution: this class visualize the solution. It also iteratively update the discretization grid to resolve the discretization error.
 
-Installation:
+# Installation:
 1. Install CPLEX.
+
 2. Add the following path to MATLAB:
 ---- (CPLEX installation folder)/IBM/ILOG/CPLEX_Stuidio1262/cplex/matlab
 ---- (this toolbox folder)
